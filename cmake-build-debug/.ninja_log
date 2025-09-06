@@ -1,7 +1,0 @@
-# ninja log v6
-481	563	1756896724985022680	idleGame	a9e7de549720b81e
-1708	1863	7788732297869692	idleGame.exe	8b2a66b19f63350b
-5	1530	7788732194996071	CMakeFiles/idleGame.dir/main.cpp.obj	c58a8273d17294a8
-5	1708	7788732280839359	CMakeFiles/idleGame.dir/game.cpp.obj	836b81e3afbb1200
-12	1704	7788732195057142	CMakeFiles/idleGame.dir/buyables.cpp.obj	f0bd05c1d45c443b
-14	1858	7788729911349112	CMakeFiles/idleGame.dir/InputMonitor.cpp.obj	e0fa8f4eebe07179
