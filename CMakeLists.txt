@@ -3,8 +3,10 @@ project(idleGame)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(idleGame main.cpp
-        game.cpp
-        game.h
-        buyables.cpp
-        buyables.h)
+add_executable(idleGame src/main.cpp
+        src/game.cpp
+        include/game.h
+        src/buyables.cpp
+        include/buyables.h
+        src/InputMonitor.cpp
+        include/InputMonitor.h)

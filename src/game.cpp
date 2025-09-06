@@ -1,38 +1,67 @@
-#include <termios.h>
 #include <vector>
 #include <climits>
 #include <iostream>
-#include <termcap.h>
+#include <thread>
 #include "game.h"
 #include "buyables.h"
 
-#include <thread>
+#ifdef __linux__
+#include <termcap.h>
+#include <termios.h>
+#include <fcntl.h>
+#endif
+
+#ifdef __APPLE__
+#include <termcap.h>
+#include <termios.h>
+#include <fcntl.h>
+#endif
+
+#ifdef _WIN64
+#include <conio.h>
+#include <windows.h>
+#endif
 
 
 game::game() {
     std::cout << "\033[H\033[J";
-    bIsRunning = true;
+    bIsRunning.store(true);
     theFunnyNumber.push_back(0);
-    clickIncrement = 1;
+    iClickIncrement = 1;
+    bIsInputThreadRunning = false;
+    monitor = new InputMonitor;
+    monitor->start([this](int ch){this->handleKey(ch);});
 }
 game::~game() {
     theFunnyNumber.clear();
     bIsRunning = false;
+    if (monitor) {
+        monitor->stop();
+        delete monitor;
+        monitor = nullptr;
+    }
+    theFunnyNumber.clear();
+    bIsRunning.store(false);
 }
 
 void game::gameRun() {
     std::cout << "\033[H";
-    display();
-    timeCounter += 1;
-    if (timeCounter == 20) {
-        increment(1);
-        timeCounter = 0;
+    {
+        std::lock_guard<std::mutex> lk(stateMutex);
+        display();
     }
+    iTimeCounter += 1;
+    if (iTimeCounter == AUTO_INCREMENT_RATE) {
+        std::lock_guard<std::mutex> lk(stateMutex);
+        increment(1);
+        iTimeCounter = 0;
+    }
+
     std::this_thread::sleep_for(std::chrono::milliseconds(1000 / FRAMERATE));
 }
 void game::display() {
 
-    std::cout<< title<<std::endl;
+    std::cout<<title<<std::endl;
     displayNumber();
 
 }
@@ -53,8 +82,13 @@ void game::displayNumber() {
     }
     std::cout << "now you have "+ number + " points"<<std::endl;
 }
-
-
+void game::handleKey(int ch) {
+    std::lock_guard<std::mutex> lk(stateMutex);
+    std::cout<< "clicked:" << static_cast<char>(ch);
+}
+void game::clear_screen() {
+    std::cout << "\033[H\033[J";
+}
 
 std::vector<int> game::increment(int carry) {
     if (carry == 0) return theFunnyNumber;
@@ -119,22 +153,6 @@ bool game::isSufficient(const std::vector<int>& cost) {
 }
 
 void game::click() {
-    increment(clickIncrement);
+    increment(iClickIncrement);
 }
 
-int game::inputMonitor() {
-    int in;
-
-    struct termios oldt, newt;
-    tcgetattr(0, &oldt);
-    newt = oldt;
-    newt.c_lflag &= ~(ICANON | ECHO);
-    newt.c_cc[VTIME] = 0;
-    tcgetattr(0, &oldt);
-    newt.c_cc[VMIN] = 1;
-    tcsetattr(0, TCSANOW, &newt);
-    in = getchar();
-    tcsetattr(0, TCSANOW, &oldt);
-
-    return in;
-}

@@ -5,6 +5,7 @@
 #include "buyables.h"
 #include "game.h"
 #include <utility>
+#include <cmath>
 
 int upgrade::level = 1;
 int building::level = 1;
