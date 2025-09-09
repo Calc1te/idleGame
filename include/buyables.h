@@ -6,7 +6,10 @@ class buyables {
     public:
     std::vector<int> vPrice;
     std::vector<int> vBoost;
+    static std::vector<int> initPrice;
+    static std::vector<int> initBoost;
     buyables(std::vector<int> price, std::vector<int> boost);
+    buyables getBuyableList();
 };
 class upgrade : public buyables {
 public:

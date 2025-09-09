@@ -2,13 +2,13 @@
 
 #include <thread>
 #ifdef __linux__
-#include <termcap.h>
+#include <unistd.h>
 #include <termios.h>
 #include <fcntl.h>
 #endif
 
 #ifdef __APPLE__
-#include <termcap.h>
+#include <unistd.h>
 #include <termios.h>
 #include <fcntl.h>
 #endif

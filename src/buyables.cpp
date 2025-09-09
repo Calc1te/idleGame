@@ -9,13 +9,15 @@
 
 int upgrade::level = 1;
 int building::level = 1;
+std::vector<int> buyables::initPrice = {10};
+std::vector<int> buyables::initBoost = {1};
 static double COEFFICIENT = 1.832;
-std::vector<int> initPrice = {10};
-std::vector<int> initBoost = {2};
+
 
 buyables::buyables(std::vector<int> price, std::vector<int> boost) {
     vPrice = std::move(price);
     vBoost = std::move(boost);
+
 }
 std::vector<int> getNext(int level, std::vector<int> vec) {
     int carry = 0;
@@ -38,6 +40,7 @@ std::vector<int> getNext(int level, std::vector<int> vec) {
 };
 
 
+
 upgrade::upgrade(std::vector<int> price, std::vector<int> boost)
     : buyables(std::move(price), std::move(boost)) {}
 
@@ -45,6 +48,7 @@ upgrade upgrade::next_buyable() {
     ++level;
     return {getNext(level, initPrice), getNext(level, initBoost)};
 }
+
 
 building::building(std::vector<int> price, std::vector<int> boost)
     : buyables(std::move(price), std::move(boost)) {}
