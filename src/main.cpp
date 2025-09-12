@@ -1,8 +1,8 @@
-#include "game.h"
+#include "Game.h"
 
 
 int main() {
-    game g;
+    Game g;
     while (g.bIsRunning) {
         g.gameRun();
     }

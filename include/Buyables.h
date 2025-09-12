@@ -2,22 +2,22 @@
 #define BUYABLES_H
 #include <vector>
 
-class buyables {
+class Buyables {
     public:
     std::vector<int> vPrice;
     std::vector<int> vBoost;
     static std::vector<int> initPrice;
     static std::vector<int> initBoost;
-    buyables(std::vector<int> price, std::vector<int> boost);
-    buyables getBuyableList();
+    Buyables(std::vector<int> price, std::vector<int> boost);
+    Buyables getBuyableList();
 };
-class upgrade : public buyables {
+class upgrade : public Buyables {
 public:
     static int level;
     upgrade(std::vector<int> price, std::vector<int> boost);
     static upgrade next_buyable();
 };
-class building : public buyables {
+class building : public Buyables {
 public:
     static int level;
     building(std::vector<int> price, std::vector<int> boost);

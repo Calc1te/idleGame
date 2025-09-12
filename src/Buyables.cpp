@@ -2,19 +2,19 @@
 // Created by Calcite on 2025/9/2.
 //
 
-#include "buyables.h"
-#include "game.h"
+#include "Buyables.h"
+#include "Game.h"
 #include <utility>
 #include <cmath>
 
 int upgrade::level = 1;
 int building::level = 1;
-std::vector<int> buyables::initPrice = {10};
-std::vector<int> buyables::initBoost = {1};
+std::vector<int> Buyables::initPrice = {10};
+std::vector<int> Buyables::initBoost = {1};
 static double COEFFICIENT = 1.832;
 
 
-buyables::buyables(std::vector<int> price, std::vector<int> boost) {
+Buyables::Buyables(std::vector<int> price, std::vector<int> boost) {
     vPrice = std::move(price);
     vBoost = std::move(boost);
 
@@ -42,7 +42,7 @@ std::vector<int> getNext(int level, std::vector<int> vec) {
 
 
 upgrade::upgrade(std::vector<int> price, std::vector<int> boost)
-    : buyables(std::move(price), std::move(boost)) {}
+    : Buyables(std::move(price), std::move(boost)) {}
 
 upgrade upgrade::next_buyable() {
     ++level;
@@ -51,7 +51,7 @@ upgrade upgrade::next_buyable() {
 
 
 building::building(std::vector<int> price, std::vector<int> boost)
-    : buyables(std::move(price), std::move(boost)) {}
+    : Buyables(std::move(price), std::move(boost)) {}
 
 building building::next_buyable() {
     ++level;

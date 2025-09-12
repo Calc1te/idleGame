@@ -14,39 +14,45 @@
 #include <vector>
 #include <string>
 
-#include "buyables.h"
+#include "Buyables.h"
 #include "InputMonitor.h"
+#include "Settings.h"
 
-class game {
+class Game {
 public:
     const std::string title =
 "  __  __ _  ____  ____  ___  ____  ____\n"
 " (  )(  ( \\(_  _)(  __)/ __)(  __)(  _ \\\n"
 "  )( /    /  )(   ) _)( (_ \\ ) _)  )   /\n"
 " (__)\\_)__) (__) (____)\\___/(____)(__\\_)\n";
+    std::string statMessage;
     std::atomic<bool> bIsRunning;
     const int FRAMERATE = 40;
     const int AUTO_INCREMENT_RATE = 40;
     int iTimeCounter = 0;
     int iClickIncrement;
     int iAutoIncrement;
+    int iOptionIdx;
     bool bIsInputThreadRunning;
+    void (Game::*buyConfirm)(int idx);
+    void (Settings::*settingConfirm)(int idx);
     enum STATE{MAIN, UPGRADE, SHOP, SETTINGS};
     int currentState;
     InputMonitor *monitor;
+    Settings *settings;
     std::mutex stateMutex;
     std::vector<int> theFunnyNumber;
     std::vector<upgrade> upgrades;
     std::vector<building> buildings;
-    game();
-    ~game();
+    Game();
+    ~Game();
     void gameRun();
 
     void display();
     void displayNumber();
     void displayMenu();
-    void displaySettings();
-    void displayMainMenu();
+    static void displaySettings();
+    static void displayMainMenu();
     void displayUpgrade();
     void displayShop();
 

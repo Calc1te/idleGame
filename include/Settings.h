@@ -7,11 +7,13 @@
 
 
 
-class settings {
-    settings();
-    ~settings();
+class Settings {
+public:
+    Settings();
+    ~Settings();
     void load_settings();
     void save_settings();
+    void confirm(int idx);
 };
 
 

@@ -2,7 +2,8 @@
 #include <climits>
 #include <iostream>
 #include <thread>
-#include "game.h"
+#include "Game.h"
+#include "Settings.h"
 
 #ifdef __linux__
 #include <termcap.h>
@@ -22,8 +23,11 @@
 #endif
 
 
-game::game() {
+Game::Game() {
     currentState = MAIN;
+    monitor = new InputMonitor;
+    settings = new Settings;
+    statMessage = "";
     clear_screen();
     upgrades.emplace_back(upgrade::initPrice, upgrade::initBoost);
     buildings.emplace_back(building::initPrice, building::initBoost);
@@ -31,11 +35,13 @@ game::game() {
     theFunnyNumber.push_back(0);
     iClickIncrement = 1;
     iAutoIncrement = 1;
+    iOptionIdx = 0;
     bIsInputThreadRunning = false;
-    monitor = new InputMonitor;
+    buyConfirm = nullptr;
+    settingConfirm = nullptr;
     monitor->start([this](int ch){this->handleKey(ch);});
 }
-game::~game() {
+Game::~Game() {
     theFunnyNumber.clear();
     bIsRunning = false;
     if (monitor) {
@@ -47,7 +53,7 @@ game::~game() {
     bIsRunning.store(false);
 }
 
-void game::gameRun() {
+void Game::gameRun() {
     clear_screen();
     {
         std::lock_guard lk(stateMutex);
@@ -62,15 +68,17 @@ void game::gameRun() {
 
     std::this_thread::sleep_for(std::chrono::milliseconds(1000 / FRAMERATE));
 }
-void game::display(){
+void Game::display(){
 
     std::cout<<title<<nl;
     displayNumber();
-    std::cout<<nl;
+    std::cout<<"auto increment is "<<iAutoIncrement<<" per second"<<nl;
     displayMenu();
+    std::cout<<nl<<statMessage<<nl;
+
 
 }
-void game::displayNumber() {
+void Game::displayNumber() {
     std::string number;
     switch (theFunnyNumber.size()) {
         case 1:
@@ -90,7 +98,7 @@ void game::displayNumber() {
     std::cout << YELLOW << "Now you have " << GREEN << number << YELLOW << " points" << RESET_COLOR << nl;
 }
 
-void game::displayMenu() {
+void Game::displayMenu() {
     switch (currentState) {
         case MAIN:
             displayMainMenu();
@@ -108,7 +116,7 @@ void game::displayMenu() {
             displayMainMenu();
     }
 }
-void game::displayMainMenu() {
+void Game::displayMainMenu() {
     std::cout<<nl<<nl;
     std::cout<<"Buy upgrade"<<nl<<nl;
     std::cout<<"Buy buildings"<<nl<<nl;
@@ -116,7 +124,7 @@ void game::displayMainMenu() {
     std::cout<<"Export save"<<nl<<nl;
 
 }
-void game::displayUpgrade() {
+void Game::displayUpgrade() {
     std::cout << YELLOW << "Upgrade Menu" << RESET_COLOR << nl << nl;
 
     for (int i = 0; i < upgrades.size(); ++i) {
@@ -125,10 +133,10 @@ void game::displayUpgrade() {
                   << " - Cost: " << upgrades[i].vPrice[0] << nl;
     }
     std::cout << nl;
-    std::cout << "Press 'b' to buy, 'm' to return to main menu" << nl;
+    std::cout << "Press 'y' to buy, 'm' to return to main menu" << nl;
 }
 
-void game::displayShop() {
+void Game::displayShop() {
     std::cout << YELLOW << "Shop Menu" << RESET_COLOR << nl << nl;
 
     for (int i = 0; i < buildings.size(); ++i) {
@@ -138,10 +146,10 @@ void game::displayShop() {
     }
 
     std::cout << nl;
-    std::cout << "Press 'b' to buy, 'm' to return to main menu" << nl;
+    std::cout << "Press 'y' to buy, 'm' to return to main menu" << nl;
 }
 
-void game::displaySettings() {
+void Game::displaySettings() {
     std::cout << YELLOW << "Settings Menu" << RESET_COLOR << nl << nl;
 
     std::cout << GREEN << "1. Toggle Sound" << RESET_COLOR << nl;
@@ -152,7 +160,7 @@ void game::displaySettings() {
     std::cout << nl;
 }
 
-void game::handleKey(int ch) {
+void Game::handleKey(int ch) {
     std::lock_guard lk(stateMutex);
     switch (ch) {
         case 'a':
@@ -160,21 +168,30 @@ void game::handleKey(int ch) {
             break;
         case 'u':
             currentState = UPGRADE;
+            buyConfirm = &Game::buyUpgrade;
             break;
         case 'b':
             currentState = SHOP;
+            buyConfirm = &Game::buyBuilding;
             break;
         case 's':
             currentState = SETTINGS;
             break;
+        case 'y':
+            if (currentState == SETTINGS)settings->confirm(iOptionIdx);
+            if (buyConfirm) (this->*buyConfirm)(iOptionIdx);
+            break;
+        case 'm':
+            currentState = MAIN;
+            statMessage = "";
         default: currentState = MAIN;
     }
 }
-void game::clear_screen() {
+void Game::clear_screen() {
     std::cout << "\033[H\033[J";
 }
 
-std::vector<int> game::increment(int carry) {
+std::vector<int> Game::increment(int carry) {
     if (carry == 0) return theFunnyNumber;
     for (size_t idx = 0; idx < theFunnyNumber.size() && carry != 0; ++idx) {
         constexpr long long BASE = INT_MAX;
@@ -188,7 +205,7 @@ std::vector<int> game::increment(int carry) {
     return theFunnyNumber;
 }
 
-std::vector<int> game::increment(const std::vector<int>& carry) {
+std::vector<int> Game::increment(const std::vector<int>& carry) {
     const size_t n = std::max(theFunnyNumber.size(), carry.size());
     theFunnyNumber.resize(n, 0);
 
@@ -208,7 +225,7 @@ std::vector<int> game::increment(const std::vector<int>& carry) {
 }
 
 
-std::vector<int> game::decrement(const std::vector<int>& cost) {
+std::vector<int> Game::decrement(const std::vector<int>& cost) {
     int carry = 0;
     for (size_t i = 0; i < cost.size() || carry; ++i) {
         if (i >= theFunnyNumber.size()) break;
@@ -227,7 +244,7 @@ std::vector<int> game::decrement(const std::vector<int>& cost) {
     return theFunnyNumber;
 }
 
-bool game::isSufficient(const std::vector<int>& cost) {
+bool Game::isSufficient(const std::vector<int>& cost) {
     if (theFunnyNumber.size() < cost.size()) return false;
     for (int i = cost.size() - 1; i >= 0; --i) {
         if (theFunnyNumber[i] < cost[i]) return false;
@@ -236,17 +253,17 @@ bool game::isSufficient(const std::vector<int>& cost) {
     return true;
 }
 
-void game::click() {
+void Game::click() {
     increment(iClickIncrement);
 }
 
 
-void game::buyUpgrade(int idx) {
+void Game::buyUpgrade(int idx) {
     if (idx < 0 || idx >= upgrades.size()) return;
 
     upgrade& u = upgrades[idx];
     if (!isSufficient(u.vPrice)) {
-        std::cout << "Too poor" << nl;
+        statMessage = "too poor";
         return;
     }
 
@@ -256,16 +273,16 @@ void game::buyUpgrade(int idx) {
 
     upgrades.push_back(upgrade::next_buyable());
 
-    std::cout << "success!" << nl;
+    statMessage = "success!";
 }
 
 
-void game::buyBuilding(int idx) {
+void Game::buyBuilding(int idx) {
     if (idx < 0 || idx >= buildings.size()) return;
 
     building& b = buildings[idx];
     if (!isSufficient(b.vPrice)) {
-        std::cout << "Too poor" << nl;
+        statMessage = "too poor";
         return;
     }
 
@@ -275,5 +292,5 @@ void game::buyBuilding(int idx) {
 
     buildings.push_back(building::next_buyable());
 
-    std::cout << "success!" << nl;
+    statMessage = "success!";
 }
