@@ -48,6 +48,7 @@ jobs:
       id: strings
       shell: bash
       run: |
+        # 使用正斜杠确保跨平台兼容性
         echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
 
     - name: Configure CMake
@@ -61,42 +62,64 @@ jobs:
     - name: Build
       run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }}
 
-    - name: Find and package executable files
+    - name: Package executables
       shell: bash
       run: |
-        cd ${{ steps.strings.outputs.build-output-dir }}
+        # 统一使用正斜杠路径
+        BUILD_DIR="${{ github.workspace }}/build"
+        echo "Building directory: $BUILD_DIR"
         
-        # 查找可执行文件（排除 .o, .obj, .a, .lib 等文件）
-        if [ "${{ matrix.os }}" = "windows-latest" ]; then
-          # Windows: 查找 .exe 文件
-          find . -maxdepth 1 -name "*.exe" -type f | head -2 > executable_list.txt
-        else
-          # Linux/macOS: 查找可执行文件（无扩展名且有执行权限）
-          find . -maxdepth 1 -type f -executable ! -name "*.*" | head -2 > executable_list.txt
-        fi
-        
-        # 读取找到的可执行文件
-        if [ -s executable_list.txt ]; then
-          echo "Found executable files:"
-          cat executable_list.txt
-          
-          # 创建平台特定的压缩包
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            zip ${{ github.repository_name }}-windows-${{ matrix.c_compiler }}.zip -@ < executable_list.txt
-          else
-            tar -czf ${{ github.repository_name }}-${{ matrix.os }}-${{ matrix.c_compiler }}.tar.gz -T executable_list.txt
-          fi
-        else
-          echo "No executable files found in:"
-          ls -la
+        # 检查构建目录是否存在
+        if [ ! -d "$BUILD_DIR" ]; then
+          echo "Error: Build directory does not exist!"
+          ls -la "${{ github.workspace }}"
           exit 1
         fi
+        
+        cd "$BUILD_DIR"
+        echo "Current directory: $(pwd)"
+        echo "Directory contents:"
+        ls -la
+        
+        # 平台特定的可执行文件查找和打包
+        if [ "${{ matrix.os }}" = "windows-latest" ]; then
+          # Windows: 查找 .exe 文件
+          echo "Looking for .exe files on Windows..."
+          find . -name "*.exe" -type f | while read exe_file; do
+            echo "Found executable: $exe_file"
+            # 创建 zip 包，只包含可执行文件
+            zip "${{ github.repository_name }}-windows.zip" "$exe_file"
+          done
+          
+        elif [ "${{ matrix.os }}" = "macos-latest" ]; then
+          # macOS: 使用 -perm +111 来查找可执行文件（替代 -executable）
+          echo "Looking for executable files on macOS..."
+          find . -type f -perm +111 ! -name "*.*" | while read exe_file; do
+            echo "Found executable: $exe_file"
+            # 创建 tar.gz 包
+            tar -czf "${{ github.repository_name }}-macos.tar.gz" "$exe_file"
+          done
+          
+        else
+          # Linux: 使用 -executable 或 -perm +111
+          echo "Looking for executable files on Linux..."
+          find . -type f -executable ! -name "*.*" | while read exe_file; do
+            echo "Found executable: $exe_file"
+            tar -czf "${{ github.repository_name }}-linux.tar.gz" "$exe_file"
+          done
+        fi
+        
+        # 检查是否成功创建了包文件
+        echo "Created packages:"
+        ls -la *.zip *.tar.gz 2>/dev/null || echo "No package files found"
 
     - name: Upload executable artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ matrix.os }}-idleGame
-        path: ${{ steps.strings.outputs.build-output-dir }}/*.zip || ${{ steps.strings.outputs.build-output-dir }}/*.tar.gz
+        name: ${{ matrix.os }}-${{ matrix.c_compiler }}-executable
+        path: |
+          ${{ github.workspace }}/build/*.zip
+          ${{ github.workspace }}/build/*.tar.gz
 
   create-release:
     needs: build
@@ -109,13 +132,6 @@ jobs:
       with:
         path: ./release-artifacts
 
-    - name: List downloaded artifacts
-      run: |
-        find ./release-artifacts -type f -name "*.zip" -o -name "*.tar.gz" | while read file; do
-          echo "Found: $file"
-          ls -la "$file"
-        done
-
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
       with:
@@ -123,12 +139,5 @@ jobs:
           ./release-artifacts/**/*.zip
           ./release-artifacts/**/*.tar.gz
         generate_release_notes: true
-        body: |
-          Multi-platform release of ${{ github.repository_name }}
-          
-          **Available builds:**
-          - Windows (MSVC)
-          - Linux (GCC)
-          - macOS (Clang)
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
