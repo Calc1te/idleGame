@@ -65,11 +65,9 @@ jobs:
     - name: Package executables
       shell: bash
       run: |
-        # 统一使用正斜杠路径
         BUILD_DIR="${{ github.workspace }}/build"
         echo "Building directory: $BUILD_DIR"
         
-        # 检查构建目录是否存在
         if [ ! -d "$BUILD_DIR" ]; then
           echo "Error: Build directory does not exist!"
           ls -la "${{ github.workspace }}"
@@ -81,27 +79,21 @@ jobs:
         echo "Directory contents:"
         ls -la
         
-        # 平台特定的可执行文件查找和打包
-        if [ "${{ matrix.os }}" = "windows-latest" ]; then
-          # Windows: 查找 .exe 文件
-          echo "Looking for .exe files on Windows..."
-          find . -name "*.exe" -type f | while read exe_file; do
-            echo "Found executable: $exe_file"
-            # 创建 zip 包，只包含可执行文件
-            zip "${{ github.repository_name }}-windows.zip" "$exe_file"
-          done
+        if ("${{ matrix.os }}" -eq "windows-latest") {
+              Get-ChildItem -Filter "*.exe" | ForEach-Object {
+                Write-Host "Found executable: $($_.Name)"
+                Compress-Archive -Path $_.Name -DestinationPath "${{ github.repository_name }}-windows.zip" -Force
+              }
+        }
           
         elif [ "${{ matrix.os }}" = "macos-latest" ]; then
-          # macOS: 使用 -perm +111 来查找可执行文件（替代 -executable）
           echo "Looking for executable files on macOS..."
           find . -type f -perm +111 ! -name "*.*" | while read exe_file; do
             echo "Found executable: $exe_file"
-            # 创建 tar.gz 包
             tar -czf "${{ github.repository_name }}-macos.tar.gz" "$exe_file"
           done
           
         else
-          # Linux: 使用 -executable 或 -perm +111
           echo "Looking for executable files on Linux..."
           find . -type f -executable ! -name "*.*" | while read exe_file; do
             echo "Found executable: $exe_file"
@@ -109,7 +101,6 @@ jobs:
           done
         fi
         
-        # 检查是否成功创建了包文件
         echo "Created packages:"
         ls -la *.zip *.tar.gz 2>/dev/null || echo "No package files found"
 
