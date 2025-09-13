@@ -17,12 +17,14 @@ add_executable(idleGame src/main.cpp
         include/InputMonitor.h
         src/Settings.cpp
         include/Settings.h)
-add_executable(debug src/debug.cpp
-        src/Game.cpp
-        include/Game.h
-        src/Buyables.cpp
-        include/Buyables.h
-        src/InputMonitor.cpp
-        include/InputMonitor.h
-        src/Settings.cpp
-        include/Settings.h)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_executable(debug src/debug.cpp
+            src/Game.cpp
+            include/Game.h
+            src/Buyables.cpp
+            include/Buyables.h
+            src/InputMonitor.cpp
+            include/InputMonitor.h
+            src/Settings.cpp
+            include/Settings.h)
+endif()
