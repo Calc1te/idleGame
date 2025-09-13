@@ -79,12 +79,13 @@ jobs:
         echo "Directory contents:"
         ls -la
         
-        if ("${{ matrix.os }}" -eq "windows-latest") {
-              Get-ChildItem -Filter "*.exe" | ForEach-Object {
-                Write-Host "Found executable: $($_.Name)"
-                Compress-Archive -Path $_.Name -DestinationPath "${{ github.repository_name }}-windows.zip" -Force
-              }
-        }
+        if [ "${{ matrix.os }}" = "windows-latest" ]; then
+          # Windows: 查找 .exe 文件
+          echo "Looking for .exe files on Windows..."
+          find . -name "*.exe" -type f | while read exe_file; do
+            echo "Found executable: $exe_file"
+            Compress-Archive -Path $exe_file "${{ github.repository_name }}-windows.zip"
+          done
           
         elif [ "${{ matrix.os }}" = "macos-latest" ]; then
           echo "Looking for executable files on macOS..."
