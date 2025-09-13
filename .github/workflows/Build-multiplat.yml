@@ -16,7 +16,6 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         build_type: [Release]
-        c_compiler: [gcc, clang, cl]
         include:
           - os: windows-latest
             c_compiler: cl
@@ -27,19 +26,6 @@ jobs:
           - os: macos-latest
             c_compiler: clang
             cpp_compiler: clang++
-        exclude:
-          - os: windows-latest
-            c_compiler: gcc
-          - os: windows-latest
-            c_compiler: clang
-          - os: ubuntu-latest
-            c_compiler: cl
-          - os: macos-latest
-            c_compiler: cl
-          - os: macos-latest
-            c_compiler: gcc
-          - os: ubuntu-latest
-            c_compiler: clang
 
     steps:
     - uses: actions/checkout@v4
@@ -79,27 +65,44 @@ jobs:
         echo "Directory contents:"
         ls -la
         
+        # Windows 平台打包
         if [ "${{ matrix.os }}" = "windows-latest" ]; then
-          # Windows: 查找 .exe 文件
           echo "Looking for .exe files on Windows..."
-          find . -name "*.exe" -type f | while read exe_file; do
-            echo "Found executable: $exe_file"
-            Compress-Archive -Path $exe_file "${{ github.repository_name }}-windows.zip"
-          done
+          # 使用 PowerShell 命令来查找和打包文件
+          pwsh -Command "
+            \$exeFiles = Get-ChildItem -Recurse -Filter *.exe
+            if (\$exeFiles) {
+              Write-Output 'Found executables:'
+              \$exeFiles | ForEach-Object { Write-Output \$_.FullName }
+              Compress-Archive -Path \$exeFiles.FullName -DestinationPath '${{ github.event.repository.name }}-windows.zip' -Force
+            } else {
+              Write-Output 'No .exe files found'
+            }
+          "
           
+        # macOS 平台打包
         elif [ "${{ matrix.os }}" = "macos-latest" ]; then
           echo "Looking for executable files on macOS..."
-          find . -type f -perm +111 ! -name "*.*" | while read exe_file; do
-            echo "Found executable: $exe_file"
-            tar -czf "${{ github.repository_name }}-macos.tar.gz" "$exe_file"
-          done
+          EXECUTABLES=$(find . -type f -perm +111 -name "*" ! -name "*.o" ! -name "*.a" ! -name "*.so" ! -name "*.dylib" 2>/dev/null || true)
+          if [ -n "$EXECUTABLES" ]; then
+            echo "Found executables:"
+            echo "$EXECUTABLES"
+            tar -czf "${{ github.event.repository.name }}-macos.tar.gz" $EXECUTABLES
+          else
+            echo "No executable files found on macOS"
+          fi
           
+        # Linux 平台打包
         else
           echo "Looking for executable files on Linux..."
-          find . -type f -executable ! -name "*.*" | while read exe_file; do
-            echo "Found executable: $exe_file"
-            tar -czf "${{ github.repository_name }}-linux.tar.gz" "$exe_file"
-          done
+          EXECUTABLES=$(find . -type f -executable -name "*" ! -name "*.o" ! -name "*.a" ! -name "*.so" 2>/dev/null || true)
+          if [ -n "$EXECUTABLES" ]; then
+            echo "Found executables:"
+            echo "$EXECUTABLES"
+            tar -czf "${{ github.event.repository.name }}-linux.tar.gz" $EXECUTABLES
+          else
+            echo "No executable files found on Linux"
+          fi
         fi
         
         echo "Created packages:"
@@ -109,9 +112,8 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.os }}-${{ matrix.c_compiler }}-executable
-        path: |
-          ${{ github.workspace }}/build/*.zip
-          ${{ github.workspace }}/build/*.tar.gz
+        path: ${{ github.workspace }}/build/*.zip
+        if-no-files-found: ignore
 
   create-release:
     needs: build
@@ -124,12 +126,13 @@ jobs:
       with:
         path: ./release-artifacts
 
+    - name: List downloaded artifacts
+      run: find ./release-artifacts -type f
+
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
       with:
-        files: |
-          ./release-artifacts/**/*.zip
-          ./release-artifacts/**/*.tar.gz
+        files: ./release-artifacts/**/*.zip ./release-artifacts/**/*.tar.gz
         generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
