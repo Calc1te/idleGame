@@ -3,6 +3,9 @@ project(idleGame)
 
 set(CMAKE_CXX_STANDARD 20)
 
+if(WIN32)
+    add_definitions(-DNOMINMAX)
+endif()
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
 add_executable(idleGame src/main.cpp
