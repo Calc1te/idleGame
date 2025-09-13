@@ -61,11 +61,42 @@ jobs:
     - name: Build
       run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }}
 
-    - name: Upload build artifacts
+    - name: Find and package executable files
+      shell: bash
+      run: |
+        cd ${{ steps.strings.outputs.build-output-dir }}
+        
+        # 查找可执行文件（排除 .o, .obj, .a, .lib 等文件）
+        if [ "${{ matrix.os }}" = "windows-latest" ]; then
+          # Windows: 查找 .exe 文件
+          find . -maxdepth 1 -name "*.exe" -type f | head -2 > executable_list.txt
+        else
+          # Linux/macOS: 查找可执行文件（无扩展名且有执行权限）
+          find . -maxdepth 1 -type f -executable ! -name "*.*" | head -2 > executable_list.txt
+        fi
+        
+        # 读取找到的可执行文件
+        if [ -s executable_list.txt ]; then
+          echo "Found executable files:"
+          cat executable_list.txt
+          
+          # 创建平台特定的压缩包
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            zip ${{ github.repository_name }}-windows-${{ matrix.c_compiler }}.zip -@ < executable_list.txt
+          else
+            tar -czf ${{ github.repository_name }}-${{ matrix.os }}-${{ matrix.c_compiler }}.tar.gz -T executable_list.txt
+          fi
+        else
+          echo "No executable files found in:"
+          ls -la
+          exit 1
+        fi
+
+    - name: Upload executable artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ matrix.os }}-${{ matrix.c_compiler }}-build
-        path: ${{ steps.strings.outputs.build-output-dir }}/
+        name: ${{ matrix.os }}-idleGame
+        path: ${{ steps.strings.outputs.build-output-dir }}/*.zip || ${{ steps.strings.outputs.build-output-dir }}/*.tar.gz
 
   create-release:
     needs: build
@@ -73,19 +104,31 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Download all build artifacts
+    - name: Download all executable artifacts
       uses: actions/download-artifact@v4
       with:
-        path: ./artifacts
+        path: ./release-artifacts
 
-    - name: Create Release
+    - name: List downloaded artifacts
+      run: |
+        find ./release-artifacts -type f -name "*.zip" -o -name "*.tar.gz" | while read file; do
+          echo "Found: $file"
+          ls -la "$file"
+        done
+
+    - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          ./artifacts/**/*
+          ./release-artifacts/**/*.zip
+          ./release-artifacts/**/*.tar.gz
         generate_release_notes: true
+        body: |
+          Multi-platform release of ${{ github.repository_name }}
+          
+          **Available builds:**
+          - Windows (MSVC)
+          - Linux (GCC)
+          - macOS (Clang)
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
