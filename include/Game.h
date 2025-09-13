@@ -13,6 +13,7 @@
 
 #include <vector>
 #include <string>
+#include <mutex>
 
 #include "Buyables.h"
 #include "InputMonitor.h"
