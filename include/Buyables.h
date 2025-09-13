@@ -15,13 +15,13 @@ class upgrade : public Buyables {
 public:
     static int level;
     upgrade(std::vector<int> price, std::vector<int> boost);
-    static upgrade next_buyable();
+    static upgrade next_buyable(const upgrade& u);
 };
 class building : public Buyables {
 public:
     static int level;
     building(std::vector<int> price, std::vector<int> boost);
-    static building next_buyable();
+    static building next_buyable(const building& b);
 };
 
 

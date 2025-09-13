@@ -21,15 +21,17 @@
 class Game {
 public:
     const std::string title =
-"  __  __ _  ____  ____  ___  ____  ____\n"
-" (  )(  ( \\(_  _)(  __)/ __)(  __)(  _ \\\n"
-"  )( /    /  )(   ) _)( (_ \\ ) _)  )   /\n"
-" (__)\\_)__) (__) (____)\\___/(____)(__\\_)\n";
+ "\033[31m  __  __ _  ____  ____  ___  ____  ____\n"
+"\033[33m (  )(  ( \\(_  _)(  __)/ __)(  __)(  _ \\\n"
+"\033[32m  )( /    /  )(   ) _)( (_ \\ ) _)  )   /\n"
+"\033[34m (__)\\_)__) (__) (____)\\___/(____)(__\\_)\n";
     std::string statMessage;
     std::atomic<bool> bIsRunning;
     const int FRAMERATE = 40;
     const int AUTO_INCREMENT_RATE = 40;
+    const int CLICK_COOLDOWN = 10;
     int iTimeCounter = 0;
+    bool bSpammingFlag = false;
     int iClickIncrement;
     int iAutoIncrement;
     int iOptionIdx;
@@ -37,6 +39,7 @@ public:
     void (Game::*buyConfirm)(int idx);
     void (Settings::*settingConfirm)(int idx);
     enum STATE{MAIN, UPGRADE, SHOP, SETTINGS};
+    void backToMain();
     int currentState;
     InputMonitor *monitor;
     Settings *settings;

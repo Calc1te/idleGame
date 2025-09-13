@@ -65,6 +65,7 @@ void Game::gameRun() {
         increment(iAutoIncrement);
         iTimeCounter = 0;
     }
+    if (iTimeCounter % CLICK_COOLDOWN == 0) bIsInputThreadRunning = false;
 
     std::this_thread::sleep_for(std::chrono::milliseconds(1000 / FRAMERATE));
 }
@@ -72,7 +73,8 @@ void Game::display(){
 
     std::cout<<title<<nl;
     displayNumber();
-    std::cout<<"auto increment is "<<iAutoIncrement<<" per second"<<nl;
+    std::cout<<nl<<YELLOW<<"auto increment is "<<GREEN<<iAutoIncrement<<YELLOW<<" per second"<<RESET_COLOR<<nl;
+    std::cout<<YELLOW<<"press 'a' to contribute "<<GREEN<<iClickIncrement<<YELLOW<<" to this number"<<RESET_COLOR<<nl;
     displayMenu();
     std::cout<<nl<<statMessage<<nl;
 
@@ -182,13 +184,18 @@ void Game::handleKey(int ch) {
             if (buyConfirm) (this->*buyConfirm)(iOptionIdx);
             break;
         case 'm':
-            currentState = MAIN;
-            statMessage = "";
-        default: currentState = MAIN;
+            backToMain();
+        default: break;
     }
 }
 void Game::clear_screen() {
     std::cout << "\033[H\033[J";
+}
+
+void Game::backToMain() {
+    currentState = MAIN;
+    statMessage = "";
+    buyConfirm = nullptr;
 }
 
 std::vector<int> Game::increment(int carry) {
@@ -254,7 +261,10 @@ bool Game::isSufficient(const std::vector<int>& cost) {
 }
 
 void Game::click() {
-    increment(iClickIncrement);
+    if (!bSpammingFlag) {
+        increment(iClickIncrement);
+        bSpammingFlag = true;
+    }
 }
 
 
@@ -271,7 +281,7 @@ void Game::buyUpgrade(int idx) {
 
     iClickIncrement += u.vBoost[0];
 
-    upgrades.push_back(upgrade::next_buyable());
+    upgrades.push_back(upgrade::next_buyable(u));
 
     statMessage = "success!";
 }
@@ -290,7 +300,7 @@ void Game::buyBuilding(int idx) {
 
      iAutoIncrement += b.vBoost[0];
 
-    buildings.push_back(building::next_buyable());
+    buildings.push_back(building::next_buyable(b));
 
     statMessage = "success!";
 }

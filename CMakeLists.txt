@@ -14,3 +14,12 @@ add_executable(idleGame src/main.cpp
         include/InputMonitor.h
         src/settings.cpp
         include/settings.h)
+add_executable(debug src/debug.cpp
+        src/game.cpp
+        include/game.h
+        src/buyables.cpp
+        include/buyables.h
+        src/InputMonitor.cpp
+        include/InputMonitor.h
+        src/settings.cpp
+        include/settings.h)
