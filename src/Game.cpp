@@ -120,10 +120,10 @@ void Game::displayMenu() {
 }
 void Game::displayMainMenu() {
     std::cout<<nl<<nl;
-    std::cout<<"Buy upgrade"<<nl<<nl;
-    std::cout<<"Buy buildings"<<nl<<nl;
-    std::cout<<"Settings"<<nl<<nl;
-    std::cout<<"Export save"<<nl<<nl;
+    std::cout<<"[u] Buy upgrade"<<nl<<nl;
+    std::cout<<"[b] Buy buildings"<<nl<<nl;
+    std::cout<<"[s] Settings"<<nl<<nl;
+    std::cout<<"[e] Export save"<<nl<<nl;
 
 }
 void Game::displayUpgrade() {
