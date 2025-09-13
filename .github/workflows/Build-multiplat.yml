@@ -36,7 +36,6 @@ jobs:
       run: |
         # 使用正斜杠确保跨平台兼容性
         echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
-
     - name: Configure CMake
       run: >
         cmake -B ${{ steps.strings.outputs.build-output-dir }}
@@ -44,7 +43,6 @@ jobs:
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
         -S ${{ github.workspace }}
-
     - name: Build
       run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }}
 
@@ -107,15 +105,13 @@ jobs:
         
         echo "Created packages:"
         ls -la *.zip *.tar.gz 2>/dev/null || echo "No package files found"
-
-        - name: Upload executable artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.os }}-${{ matrix.c_compiler }}-executable
-          path: |
-            ${{ github.workspace }}/build/*.zip
-            ${{ github.workspace }}/build/*.tar.gz
-
+    - name: Upload executable artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.os }}-${{ matrix.c_compiler }}-executable
+        path: |
+          ${{ github.workspace }}/build/*.zip
+          ${{ github.workspace }}/build/*.tar.gz
   create-release:
     needs: build
     runs-on: ubuntu-latest
@@ -126,10 +122,7 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         path: ./release-artifacts
-        
-    - name: List downloaded artifacts
-      run: find ./release-artifacts -type f
-      
+
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
       with:
@@ -139,3 +132,4 @@ jobs:
         generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
