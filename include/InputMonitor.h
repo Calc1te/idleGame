@@ -26,10 +26,13 @@ class InputMonitor {
 public:
     using Callback = std::function<void(int)>;
 
-    InputMonitor(): bRunning(false){}
+    InputMonitor(): paused(false), bRunning(false){}
     ~InputMonitor();
+    std::atomic<bool> paused;
     void start(const Callback& callback);
     void stop();
+    void pause();
+    void resume();
 
 private:
     std::atomic<bool> bRunning;

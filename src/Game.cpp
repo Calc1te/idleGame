@@ -5,29 +5,15 @@
 #include "Game.h"
 #include "Settings.h"
 
-#ifdef __linux__
-#include <termcap.h>
-#include <termios.h>
-#include <fcntl.h>
-#endif
-
-#ifdef __APPLE__
-#include <termcap.h>
-#include <termios.h>
-#include <fcntl.h>
-#endif
-
-#ifdef _WIN64
-#include <conio.h>
-#include <windows.h>
-#endif
-
 
 Game::Game() {
+    initWindow();
     currentState = MAIN;
     monitor = new InputMonitor;
-    settings = new Settings;
+    settings = new Settings(this);
     statMessage = "";
+    bInputMode.store(false);
+    bIsDisplayOnHalt.store(false);
     clear_screen();
     upgrades.emplace_back(upgrade::initPrice, upgrade::initBoost);
     buildings.emplace_back(building::initPrice, building::initBoost);
@@ -52,12 +38,28 @@ Game::~Game() {
     theFunnyNumber.clear();
     bIsRunning.store(false);
 }
+void Game::initWindow() {
+#ifdef _WIN64
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    GetConsoleScreenBufferInfo(hConsole, &csbi);
+    LINE_HEIGHT = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+#else
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &win);
+    LINE_HEIGHT = win.ws_col;
+#endif
+
+}
 
 void Game::gameRun() {
-    clear_screen();
-    {
-        std::lock_guard lk(stateMutex);
-        display();
+    if (!bIsDisplayOnHalt.load()) {
+        clear_screen();
+        {
+            std::lock_guard lk(stateMutex);
+            display();
+        }
+    }else {
+        clear_screen();
     }
     iTimeCounter += 1;
     if (iTimeCounter == AUTO_INCREMENT_RATE) {
@@ -70,8 +72,10 @@ void Game::gameRun() {
     std::this_thread::sleep_for(std::chrono::milliseconds(1000 / FRAMERATE));
 }
 void Game::display(){
-
     std::cout<<title<<nl;
+    if (!username.empty()) {
+        std::cout<<MAGENTA<<"Hello, "<<username<<"!"<<RESET_COLOR<<nl;
+    }
     displayNumber();
     std::cout<<nl<<YELLOW<<"auto increment is "<<GREEN<<iAutoIncrement<<YELLOW<<" per second"<<RESET_COLOR<<nl;
     std::cout<<YELLOW<<"press 'a' to contribute "<<GREEN<<iClickIncrement<<YELLOW<<" to this number"<<RESET_COLOR<<nl;
@@ -80,7 +84,7 @@ void Game::display(){
 
 
 }
-void Game::displayNumber() {
+void Game::displayNumber(){
     std::string number;
     switch (theFunnyNumber.size()) {
         case 1:
@@ -100,7 +104,7 @@ void Game::displayNumber() {
     std::cout << YELLOW << "Now you have " << GREEN << number << YELLOW << " points" << RESET_COLOR << nl;
 }
 
-void Game::displayMenu() {
+void Game::displayMenu(){
     switch (currentState) {
         case MAIN:
             displayMainMenu();
@@ -112,7 +116,7 @@ void Game::displayMenu() {
             displayShop();
             break;
         case SETTINGS:
-            displaySettings();
+            settings->displaySettings();
             break;
         default:
             displayMainMenu();
@@ -126,10 +130,13 @@ void Game::displayMainMenu() {
     std::cout<<"[e] Export save"<<nl<<nl;
 
 }
-void Game::displayUpgrade() {
+void Game::displayUpgrade(){
     std::cout << YELLOW << "Upgrade Menu" << RESET_COLOR << nl << nl;
-
+    if (buildings.size() > 6)std::cout << GREEN <<"..."<<RESET_COLOR<<nl;
     for (int i = 0; i < upgrades.size(); ++i) {
+        if (upgrades.size() > LINE_HEIGHT && upgrades.size() - i > LINE_HEIGHT - 13) {
+            continue;
+        }
         std::cout << GREEN << "Upgrade " << i + 1 << ": "
                   << upgrades[i].vBoost[0] << " boost "
                   << " - Cost: " << upgrades[i].vPrice[0] << nl;
@@ -138,10 +145,13 @@ void Game::displayUpgrade() {
     std::cout << "Press 'y' to buy, 'm' to return to main menu" << nl;
 }
 
-void Game::displayShop() {
+void Game::displayShop(){
     std::cout << YELLOW << "Shop Menu" << RESET_COLOR << nl << nl;
-
+    if (buildings.size() > 8)std::cout << GREEN <<"...";
     for (int i = 0; i < buildings.size(); ++i) {
+        if (upgrades.size() > LINE_HEIGHT - 13 && upgrades.size() - i > LINE_HEIGHT - 13) {
+            continue;
+        }
         std::cout << GREEN << "Building " << i + 1 << ": "
                   << buildings[i].vBoost[0] << " boost "
                   << " - Cost: " << buildings[i].vPrice[0] << nl;
@@ -151,24 +161,20 @@ void Game::displayShop() {
     std::cout << "Press 'y' to buy, 'm' to return to main menu" << nl;
 }
 
-void Game::displaySettings() {
-    std::cout << YELLOW << "Settings Menu" << RESET_COLOR << nl << nl;
 
-    std::cout << GREEN << "1. Toggle Sound" << RESET_COLOR << nl;
-    std::cout << GREEN << "2. Toggle Fullscreen" << RESET_COLOR << nl;
-    std::cout << GREEN << "3. Change Language" << RESET_COLOR << nl;
-    std::cout << GREEN << "4. Back to Main Menu" << RESET_COLOR << nl;
-
-    std::cout << nl;
-}
 
 void Game::handleKey(int ch) {
+    if (bInputMode.load()){return;}
     std::lock_guard lk(stateMutex);
     switch (ch) {
         case 'a':
             increment(iClickIncrement);
             break;
         case 'u':
+            if (currentState==SETTINGS) {
+                settings->thisSettingPage = Settings::username;
+                break;
+            }
             currentState = UPGRADE;
             buyConfirm = &Game::buyUpgrade;
             break;
@@ -185,6 +191,12 @@ void Game::handleKey(int ch) {
             break;
         case 'm':
             backToMain();
+            break;
+        case 'l':
+            if (currentState == SETTINGS)settings->thisSettingPage = Settings::loadSave;
+            break;
+        case 'e':
+            if (currentState == SETTINGS)settings->thisSettingPage = Settings::exportSave;
         default: break;
     }
 }
@@ -251,9 +263,9 @@ std::vector<int> Game::decrement(const std::vector<int>& cost) {
     return theFunnyNumber;
 }
 
-bool Game::isSufficient(const std::vector<int>& cost) {
+bool Game::isSufficient(const std::vector<int>& cost) const {
     if (theFunnyNumber.size() < cost.size()) return false;
-    for (int i = cost.size() - 1; i >= 0; --i) {
+    for (int i = static_cast<int>(cost.size()) - 1; i >= 0; --i) {
         if (theFunnyNumber[i] < cost[i]) return false;
         if (theFunnyNumber[i] > cost[i]) return true;
     }
@@ -271,7 +283,7 @@ void Game::click() {
 void Game::buyUpgrade(int idx) {
     if (idx < 0 || idx >= upgrades.size()) return;
 
-    upgrade& u = upgrades[idx];
+    upgrade& u = upgrades[upgrades.size() - 1];
     if (!isSufficient(u.vPrice)) {
         statMessage = "too poor";
         return;
@@ -290,7 +302,7 @@ void Game::buyUpgrade(int idx) {
 void Game::buyBuilding(int idx) {
     if (idx < 0 || idx >= buildings.size()) return;
 
-    building& b = buildings[idx];
+    building& b = buildings[buildings.size() - 1];
     if (!isSufficient(b.vPrice)) {
         statMessage = "too poor";
         return;
@@ -303,4 +315,9 @@ void Game::buyBuilding(int idx) {
     buildings.push_back(building::next_buyable(b));
 
     statMessage = "success!";
+}
+
+void Game::setHalt(bool active) {
+    bInputMode.store(active);
+    bIsDisplayOnHalt.store(active);
 }
