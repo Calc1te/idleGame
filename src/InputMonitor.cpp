@@ -16,6 +16,10 @@
 #ifdef _WIN64
 #include <conio.h>
 #include <windows.h>
+#define WIN32_LEAN_AND_MEAN
+#ifdef store
+#undef store
+#endif
 #endif
 
 void InputMonitor::start(const Callback& callback)

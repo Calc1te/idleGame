@@ -39,25 +39,48 @@ Game::~Game() {
     bIsRunning.store(false);
 }
 void Game::initWindow() {
+    int LINE_WIDTH = 0;
+
 #ifdef _WIN64
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     CONSOLE_SCREEN_BUFFER_INFO csbi;
-    GetConsoleScreenBufferInfo(hConsole, &csbi);
-    LINE_HEIGHT = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+    if (GetConsoleScreenBufferInfo(hConsole, &csbi)) {
+        LINE_HEIGHT = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+        LINE_WIDTH  = csbi.srWindow.Right - csbi.srWindow.Left + 1;
+    } else {
+        LINE_HEIGHT = 25;
+        LINE_WIDTH  = 80;
+    }
 #else
     struct winsize win;
-    ioctl(STDOUT_FILENO, TIOCGWINSZ, &win);
-    LINE_HEIGHT = win.ws_row;
-    int LINE_WIDTH = win.ws_col;
-#endif
-    while (LINE_HEIGHT < 18 || LINE_WIDTH < 40) {
-        std::cout<<MAGENTA<<"this terminal window seems too small"<<nl;
-        std::cout<<MAGENTA<<"current window size is "<<LINE_WIDTH<<"*"<<LINE_HEIGHT<<nl;
-        std::cout<<MAGENTA<<"try resize this window to continue?"<<nl<<nl;
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
-        ioctl(STDOUT_FILENO, TIOCGWINSZ, &win);
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &win) == 0) {
         LINE_HEIGHT = win.ws_row;
-        LINE_WIDTH = win.ws_col;
+        LINE_WIDTH  = win.ws_col;
+    } else {
+        LINE_HEIGHT = 25;
+        LINE_WIDTH  = 80;
+    }
+#endif
+
+    while (LINE_HEIGHT < 18 || LINE_WIDTH < 40) {
+        std::cout << MAGENTA << "this terminal window seems too small" << nl;
+        std::cout << MAGENTA << "current window size is "
+                  << LINE_WIDTH << "*" << LINE_HEIGHT << nl;
+        std::cout << MAGENTA << "try resize this window to continue?" << nl << nl;
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+#ifdef _WIN64
+        if (GetConsoleScreenBufferInfo(hConsole, &csbi)) {
+            LINE_HEIGHT = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+            LINE_WIDTH  = csbi.srWindow.Right - csbi.srWindow.Left + 1;
+        }
+#else
+        if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &win) == 0) {
+            LINE_HEIGHT = win.ws_row;
+            LINE_WIDTH  = win.ws_col;
+        }
+#endif
         clear_screen();
     }
 }
