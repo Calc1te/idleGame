@@ -1,5 +1,6 @@
 #include "Settings.h"
-
+#include "Game.h"
+#include "DisplayUtils.h"
 #include <iostream>
 
 Settings::Settings(Game* g) {
@@ -62,6 +63,8 @@ std::string Settings::setUsername() {
     std::cout<<"what's your name?"<< nl;
     std::getline(std::cin, userName);
     game->monitor->resume();
+    game->setHalt(false);
+    thisSettingPage = menu;
     return userName;
 }
 

@@ -4,11 +4,10 @@
 
 #ifndef SETTINGS_H
 #define SETTINGS_H
-#include "Game.h"
 #include "InputMonitor.h"
 #include <vector>
 
-
+class Game;
 class Settings {
 public:
     int thisSettingPage;

@@ -18,12 +18,13 @@
 #include "DisplayUtils.h"
 #include "Buyables.h"
 #include "InputMonitor.h"
-#include "Settings.h"
 
-
+class Settings;
 class Game {
 public:
+#ifndef _WIN64
     struct winsize win;
+#endif
     const std::string username;
     std::string statMessage;
     std::atomic<bool> bIsRunning;
