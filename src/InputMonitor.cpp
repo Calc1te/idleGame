@@ -16,7 +16,6 @@
 #ifdef _WIN64
 #include <conio.h>
 #include <windows.h>
-#define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 #ifdef store
 #undef store
