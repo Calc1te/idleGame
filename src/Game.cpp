@@ -45,10 +45,21 @@ void Game::initWindow() {
     GetConsoleScreenBufferInfo(hConsole, &csbi);
     LINE_HEIGHT = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
 #else
+    struct winsize win;
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &win);
-    LINE_HEIGHT = win.ws_col;
+    LINE_HEIGHT = win.ws_row;
+    int LINE_WIDTH = win.ws_col;
 #endif
-
+    while (LINE_HEIGHT < 18 || LINE_WIDTH < 40) {
+        std::cout<<MAGENTA<<"this terminal window seems too small"<<nl;
+        std::cout<<MAGENTA<<"current window size is "<<LINE_WIDTH<<"*"<<LINE_HEIGHT<<nl;
+        std::cout<<MAGENTA<<"try resize this window to continue?"<<nl<<nl;
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        ioctl(STDOUT_FILENO, TIOCGWINSZ, &win);
+        LINE_HEIGHT = win.ws_row;
+        LINE_WIDTH = win.ws_col;
+        clear_screen();
+    }
 }
 
 void Game::gameRun() {
@@ -134,7 +145,7 @@ void Game::displayUpgrade(){
     std::cout << YELLOW << "Upgrade Menu" << RESET_COLOR << nl << nl;
     if (buildings.size() > 6)std::cout << GREEN <<"..."<<RESET_COLOR<<nl;
     for (int i = 0; i < upgrades.size(); ++i) {
-        if (upgrades.size() > LINE_HEIGHT && upgrades.size() - i > LINE_HEIGHT - 13) {
+        if (upgrades.size() > LINE_HEIGHT - 13 && upgrades.size() - i > LINE_HEIGHT - 13) {
             continue;
         }
         std::cout << GREEN << "Upgrade " << i + 1 << ": "

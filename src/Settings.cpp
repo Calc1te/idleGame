@@ -53,7 +53,7 @@ void Settings::displaySettingsLoadSave() {
 
 }
 
-std::string Settings::setUsername() {
+void Settings::setUsername() {
     // halt display and input monitor to let user type something
     game->setHalt(true);
     game->monitor->pause();
@@ -65,7 +65,9 @@ std::string Settings::setUsername() {
     game->monitor->resume();
     game->setHalt(false);
     thisSettingPage = menu;
-    return userName;
+    game->username = userName;
+
+
 }
 
 void Settings::confirm(int idx){}

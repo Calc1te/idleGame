@@ -26,7 +26,7 @@ public:
 
     void displaySettingsLoadSave();
 
-    std::string setUsername();
+    void setUsername();
 
     void confirm(int option);
 

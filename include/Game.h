@@ -22,10 +22,7 @@
 class Settings;
 class Game {
 public:
-#ifndef _WIN64
-    struct winsize win;
-#endif
-    const std::string username;
+    std::string username;
     std::string statMessage;
     std::atomic<bool> bIsRunning;
     std::atomic<bool> bInputMode;
@@ -38,7 +35,7 @@ public:
     int iClickIncrement;
     int iAutoIncrement;
     int iOptionIdx;
-    int LINE_HEIGHT;
+    int LINE_HEIGHT = 0;
     bool bIsInputThreadRunning;
     void (Game::*buyConfirm)(int idx);
     void (Settings::*settingConfirm)(int idx);
