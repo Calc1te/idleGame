@@ -1,33 +1,32 @@
 #ifndef GAME_H
 #define GAME_H
 
-#define nl std::endl
-#define RESET_COLOR "\033[0m"
-#define RED "\033[31m"
-#define GREEN "\033[32m"
-#define YELLOW "\033[33m"
-#define BLUE "\033[34m"
-#define MAGENTA "\033[35m"
-#define CYAN "\033[36m"
-#define WHITE "\033[37m"
+
 
 #include <vector>
 #include <string>
 #include <mutex>
 
+
+#ifdef _WIN64
+#include <windows.h>
+#else
+#include <sys/ioctl.h>
+#include <unistd.h>
+#endif
+
+#include "DisplayUtils.h"
 #include "Buyables.h"
 #include "InputMonitor.h"
-#include "Settings.h"
 
+class Settings;
 class Game {
 public:
-    const std::string title =
- "\033[31m  __  __ _  ____  ____  ___  ____  ____\n"
-"\033[33m (  )(  ( \\(_  _)(  __)/ __)(  __)(  _ \\\n"
-"\033[32m  )( /    /  )(   ) _)( (_ \\ ) _)  )   /\n"
-"\033[34m (__)\\_)__) (__) (____)\\___/(____)(__\\_)\n";
+    std::string username;
     std::string statMessage;
     std::atomic<bool> bIsRunning;
+    std::atomic<bool> bInputMode;
+    std::atomic<bool> bIsDisplayOnHalt;
     const int FRAMERATE = 40;
     const int AUTO_INCREMENT_RATE = 40;
     const int CLICK_COOLDOWN = 10;
@@ -36,6 +35,7 @@ public:
     int iClickIncrement;
     int iAutoIncrement;
     int iOptionIdx;
+    int LINE_HEIGHT = 0;
     bool bIsInputThreadRunning;
     void (Game::*buyConfirm)(int idx);
     void (Settings::*settingConfirm)(int idx);
@@ -51,14 +51,14 @@ public:
     Game();
     ~Game();
     void gameRun();
-
+    void initWindow();
+    void setHalt(bool active);
     void display();
     void displayNumber();
     void displayMenu();
-    static void displaySettings();
-    static void displayMainMenu();
     void displayUpgrade();
     void displayShop();
+    static void displayMainMenu();
 
     void handleKey(int ch);
     static void clear_screen();
@@ -66,7 +66,7 @@ public:
     std::vector<int> increment(int carry);
     std::vector<int> increment(const std::vector<int>& carry);
     std::vector<int> decrement(const std::vector<int>& cost);
-    bool isSufficient(const std::vector<int>& cost);
+    bool isSufficient(const std::vector<int>& cost) const;
     void click();
 
     void buyUpgrade(int idx);

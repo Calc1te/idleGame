@@ -26,5 +26,6 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
             src/InputMonitor.cpp
             include/InputMonitor.h
             src/Settings.cpp
-            include/Settings.h)
+            include/Settings.h
+            include/displayUtils.h)
 endif()

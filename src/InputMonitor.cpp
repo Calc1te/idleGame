@@ -54,6 +54,8 @@ int InputMonitor::pollInput() {
     }
     return -1;
 }
+void InputMonitor::pause() { paused.store(true); resetInput(); }
+void InputMonitor::resume() { initInput(); paused.store(false); }
 #else
 void InputMonitor::initInput() {
     struct termios newt;
@@ -76,4 +78,7 @@ int InputMonitor::pollInput() {
     if (ch != EOF) return ch;
     return -1;
 }
+void InputMonitor::pause() { paused.store(true); resetInput(); }
+void InputMonitor::resume() { initInput(); paused.store(false); }
+
 #endif
