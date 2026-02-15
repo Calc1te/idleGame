@@ -62,6 +62,7 @@ void Settings::setUsername() {
     std::string userName;
     std::cout<<"what's your name?"<< nl;
     std::getline(std::cin, userName);
+    // remember to reactivate input monitor
     game->monitor->resume();
     game->setHalt(false);
     thisSettingPage = menu;
