@@ -2,7 +2,7 @@
 
 #include "Game.h"
 #include "Buyables.h"
-#include "base64.h"
+#include "../include/base64.h"
 
 int main() {
     std::string input = "test";

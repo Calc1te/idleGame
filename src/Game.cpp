@@ -58,7 +58,7 @@ void Game::initWindow() {
     };
 #else
     struct winsize win;
-    auto getSize = [&]() {
+    auto getSize = [&] {
         if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &win) == 0) {
             LINE_HEIGHT = win.ws_row;
             lineWidth   = win.ws_col;
@@ -330,6 +330,9 @@ void Game::buyUpgrade(int idx) {
     statMessage = "success!";
 }
 
+std::string Game::getuserName() const{
+    return username;
+}
 
 void Game::buyBuilding(int idx) {
     if (idx < 0 || idx >= buildings.size()) return;

@@ -58,6 +58,7 @@ public:
     void displayMenu();
     void displayUpgrade();
     void displayShop();
+    std::string getuserName() const;
     static void displayMainMenu();
 
     void handleKey(int ch);
