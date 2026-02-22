@@ -26,6 +26,7 @@ Game::Game() {
     buyConfirm = nullptr;
     settingConfirm = nullptr;
     monitor->start([this](int ch){this->handleKey(ch);});
+    username = "";
 }
 Game::~Game() {
     theFunnyNumber.clear();
@@ -193,10 +194,12 @@ void Game::displayShop(){
     std::cout << "Press 'y' to buy, 'm' to return to main menu" << nl;
 }
 
-
-
 void Game::handleKey(int ch) {
     if (bInputMode.load()){return;}
+    if (bPathInputFlag) {
+        updatePathInput(ch);
+        return;
+    }
     std::lock_guard lk(stateMutex);
     switch (ch) {
         case 'a':
@@ -311,6 +314,20 @@ void Game::click() {
     }
 }
 
+bool Game::updatePathInput(char ch) {
+    if (ch == 13) {
+        bPathInputFlag = false;
+        return true;
+    }
+    if (ch == 8) {
+        ch = '/b';
+        if (!fakeInputBuffer.empty()) {
+            fakeInputBuffer.pop_back();
+        }
+    }
+    fakeInputBuffer.push_back(ch);
+    return false;
+}
 
 void Game::buyUpgrade(int idx) {
     if (idx < 0 || idx >= upgrades.size()) return;

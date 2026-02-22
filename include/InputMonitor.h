@@ -3,6 +3,7 @@
 #include <atomic>
 #include <functional>
 #include <thread>
+#include <string>
 #ifdef __linux__
 #include <termcap.h>
 #include <termios.h>
@@ -33,6 +34,9 @@ public:
     void stop();
     void pause();
     void resume();
+    void prePathInput();
+    void postPathInput();
+    std::string readLine(const std::string& prompt, const std::string& defaultInput = "");
 
 private:
     std::atomic<bool> bRunning;
@@ -40,7 +44,9 @@ private:
     void initInput();
     void resetInput();
     int pollInput();
-#ifndef _WIN32
+    char pollPath();
+#ifdef _WIN32
+#else
     struct termios oldt;
     int oldf;
 #endif

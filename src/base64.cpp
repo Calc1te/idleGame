@@ -12,13 +12,13 @@ std::string base64::encode(const std::string& input) {
     int ch_ptr = 0;
     std::string output;
     std::vector<int> T(128, -1);
-    for (int i = 0; i < 64; i++) T[base64_chars[i]] = i;
+    for (int i = 0; i < 64; i++) T[i] = base64_chars[i];
     int val = 0, valb = -6;
     for (unsigned char c : input) {
         val = (val << 8) + c;
         valb += 8;
         while (valb >= 0) {
-            output.push_back(base64_chars[val >> valb] & 0x3F); // Rshift 2
+            output.push_back(base64_chars[val >> valb & 0x3F]); // Rshift 2
             valb -= 6;
         }
     }

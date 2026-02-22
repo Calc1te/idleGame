@@ -63,42 +63,19 @@ void Settings::displaySettingsExportSave() {
     std::cout << "\033[H\033[J";
     std::cout << title << nl;
     std::cout << YELLOW << "Where do you want to save your file?" << RESET_COLOR << nl;
-    std::cout << YELLOW << "directory + name" << RESET_COLOR << nl;
-    std::string filePath;
+
     std::filesystem::path cwd = std::filesystem::current_path();
     std::string defaultPath = cwd.string();
     if (!defaultPath.empty() && defaultPath.back() != std::filesystem::path::preferred_separator) {
         defaultPath += std::filesystem::path::preferred_separator;
     }
+    std::string fullDefault = defaultPath + game->getuserName();
 
-#ifdef _WIN64
-    HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
-    for (char c : defaultPath) {
-        INPUT inputs[2] = {};
+    // Use the new readLine function which handles input buffer display and editing
+    std::string filePath = game->monitor->readLine("Path: ", fullDefault);
 
-        inputs[0].EventType = KEY_EVENT;
-        inputs[0].Event.KeyEvent.bKeyDown = TRUE;
-        inputs[0].Event.KeyEvent.uChar.AsciiChar = c;
-        inputs[0].Event.KeyEvent.wRepeatCount = 1;
-
-        inputs[1].EventType = KEY_EVENT;
-        inputs[1].Event.KeyEvent.bKeyDown = FALSE;
-        inputs[1].Event.KeyEvent.uChar.AsciiChar = c;
-        inputs[1].Event.KeyEvent.wRepeatCount = 1;
-
-        DWORD written;
-        WriteConsoleInputA(hInput, inputs, 2, &written);
-    }
-#else
-    for (char c : defaultPath) {
-        ioctl(STDIN_FILENO, TIOCSTI, &c);
-    }
-#endif
-
-    std::getline(std::cin, filePath);
-
-    if (filePath.empty()) {
-        filePath = defaultPath + game->getuserName(); // Fallback
+    if (filePath.length() < 4 || filePath.substr(filePath.length() - 4) != ".ids") {
+        filePath += ".ids";
     }
 
     exportSaveFile(filePath);
@@ -119,16 +96,21 @@ void Settings::exportSaveFile(std::filesystem::path path) {
     for (int num : data.theFunnyNumber) {
         o += std::to_string(num) + "-";
     }
-    o += std::to_string('_');
+    o += "_";
     o += std::to_string(data.uLevel) + "_";
     o += std::to_string(data.bLevel) + "_";
     o += data.userName;
     std::string bo = base64::encode(o);
     try {
         std::ofstream outFile(path);
+        if (!outFile.is_open()) {
+            game->statMessage = "save failed! Could not open file: " + path.string();
+            return;
+        }
         outFile << bo;
         outFile.close();
-    } catch (const std::filesystem::filesystem_error& e) {
+        game->statMessage = "save file to " + path.string() + "!";
+    } catch (const std::exception& e) {
         game->statMessage = "save failed! " + std::string(e.what());
     }
 
@@ -140,40 +122,18 @@ void Settings::displaySettingsLoadSave() {
     std::cout << "\033[H\033[J";
     std::cout << title << nl;
     std::cout << YELLOW << "Where is the file?" << RESET_COLOR << nl;
-    std::string filePath;
+
     std::filesystem::path cwd = std::filesystem::current_path();
     std::string defaultPath = cwd.string();
     if (!defaultPath.empty() && defaultPath.back() != std::filesystem::path::preferred_separator) {
         defaultPath += std::filesystem::path::preferred_separator;
     }
+    std::string fullDefault = defaultPath + game->getuserName();
 
-#ifdef _WIN64
-    HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
-    for (char c : defaultPath) {
-        INPUT inputs[2] = {};
+    std::string filePath = game->monitor->readLine("Path: ", fullDefault);
 
-        inputs[0].EventType = KEY_EVENT;
-        inputs[0].Event.KeyEvent.bKeyDown = TRUE;
-        inputs[0].Event.KeyEvent.uChar.AsciiChar = c;
-        inputs[0].Event.KeyEvent.wRepeatCount = 1;
-
-        inputs[1].EventType = KEY_EVENT;
-        inputs[1].Event.KeyEvent.bKeyDown = FALSE;
-        inputs[1].Event.KeyEvent.uChar.AsciiChar = c;
-        inputs[1].Event.KeyEvent.wRepeatCount = 1;
-
-        DWORD written;
-        WriteConsoleInputA(hInput, inputs, 2, &written);
-    }
-#else
-    for (char c : defaultPath) {
-        ioctl(STDIN_FILENO, TIOCSTI, &c);
-    }
-#endif
-
-    std::getline(std::cin, filePath);
     if (filePath.empty()) {
-        filePath = defaultPath + game->getuserName(); // Fallback
+        filePath = fullDefault;
     }
 
     importSaveFile(filePath);

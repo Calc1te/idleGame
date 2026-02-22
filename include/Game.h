@@ -24,14 +24,16 @@ class Game {
 public:
     std::string username;
     std::string statMessage;
+    std::string fakeInputBuffer;
     std::atomic<bool> bIsRunning;
     std::atomic<bool> bInputMode;
     std::atomic<bool> bIsDisplayOnHalt;
-    const int FRAMERATE = 40;
-    const int AUTO_INCREMENT_RATE = 40;
+    const int FRAMERATE = 60;
+    const int AUTO_INCREMENT_RATE = 60;
     const int CLICK_COOLDOWN = 10;
     int iTimeCounter = 0;
     bool bSpammingFlag = false;
+    bool bPathInputFlag = false;
     int iClickIncrement;
     int iAutoIncrement;
     int iOptionIdx;
@@ -58,6 +60,7 @@ public:
     void displayMenu();
     void displayUpgrade();
     void displayShop();
+    bool updatePathInput(char ch);
     std::string getuserName() const;
     static void displayMainMenu();
 
