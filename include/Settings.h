@@ -6,6 +6,9 @@
 #define SETTINGS_H
 #include "InputMonitor.h"
 #include <vector>
+#include <__filesystem/filesystem_error.h>
+
+#include "Game.h"
 
 class Game;
 class Settings {
@@ -24,6 +27,10 @@ public:
 
     void displaySettingsExportSave(); // $username.ids
 
+    void exportSaveFile(std::filesystem::path path);
+
+    void importSaveFile(std::filesystem::path path);
+
     void displaySettingsLoadSave();
 
     void setUsername();
@@ -34,6 +41,7 @@ public:
         std::vector<int> theFunnyNumber;
         int uLevel;
         int bLevel;
+        std::string userName;
     };
 
 };
